@@ -14,7 +14,7 @@ from reportlab.pdfgen import canvas
 st.set_page_config(page_title="Bio-Acoustic Sentinel", layout="wide")
 
 # =============================
-# CYBER DARK THEME
+# CYBER DARK THEME + BUTTON FIX
 # =============================
 st.markdown("""
 <style>
@@ -22,9 +22,50 @@ st.markdown("""
     background-color: #0e1117;
     color: white;
 }
+
 h1, h2, h3 {
     color: #00ffcc;
 }
+
+[data-testid="stMetricValue"] {
+    color: #00ffcc;
+}
+
+/* Simulate Alert Button */
+div.stButton > button {
+    background-color: #ff0033;
+    color: white;
+    border-radius: 8px;
+    border: none;
+    font-weight: bold;
+    padding: 10px 20px;
+    box-shadow: 0 0 10px #ff0033;
+    transition: 0.3s;
+}
+
+div.stButton > button:hover {
+    background-color: #ff3366;
+    box-shadow: 0 0 20px red;
+    transform: scale(1.03);
+}
+
+/* Download Button */
+div.stDownloadButton > button {
+    background-color: #00cc99;
+    color: black;
+    border-radius: 8px;
+    font-weight: bold;
+    padding: 10px 20px;
+    box-shadow: 0 0 10px #00ffcc;
+    transition: 0.3s;
+}
+
+div.stDownloadButton > button:hover {
+    background-color: #00ffcc;
+    transform: scale(1.03);
+}
+
+/* Blinking Emergency Border */
 .blink {
     animation: blinker 1s linear infinite;
     border: 5px solid red;
@@ -54,12 +95,6 @@ if "blink" not in st.session_state:
     st.session_state.blink = False
 
 # =============================
-# CONFIG
-# =============================
-THREAT_KEYWORDS = ["Chainsaw", "Gunshot", "Explosion", "Fire", "Siren"]
-CONFIDENCE_THRESHOLD = 0.6
-
-# =============================
 # HEADER
 # =============================
 if st.session_state.blink:
@@ -73,13 +108,13 @@ if st.session_state.blink:
     st.markdown('</div>', unsafe_allow_html=True)
 
 # =============================
-# SYSTEM UPTIME
+# UPTIME
 # =============================
 uptime_seconds = int(time.time() - st.session_state.start_time)
 st.caption(f"🕒 System Uptime: {uptime_seconds} seconds")
 
 # =============================
-# SIDEBAR
+# SIDEBAR CONTROLS
 # =============================
 st.sidebar.header("🛠 System Controls")
 sensitivity = st.sidebar.slider("Detection Sensitivity", 0, 100, 75)
@@ -92,13 +127,13 @@ region = st.sidebar.selectbox(
 st.sidebar.success("🟢 System Status: ACTIVE")
 
 # =============================
-# MULTI SENSOR SIMULATION
+# MULTI SENSOR STATUS
 # =============================
 st.sidebar.subheader("📡 Sensor Network Status")
 sensor_status = {
-    "Sensor-1": random.choice(["Online", "Online", "Online", "Offline"]),
-    "Sensor-2": random.choice(["Online", "Online", "Offline"]),
-    "Sensor-3": random.choice(["Online", "Online", "Online"]),
+    "Sensor-1": random.choice(["Online", "Online", "Offline"]),
+    "Sensor-2": random.choice(["Online", "Online", "Online"]),
+    "Sensor-3": random.choice(["Online", "Offline"]),
 }
 for sensor, status in sensor_status.items():
     if status == "Online":
@@ -107,7 +142,7 @@ for sensor, status in sensor_status.items():
         st.sidebar.error(f"{sensor}: {status}")
 
 # =============================
-# DASHBOARD METRICS
+# DASHBOARD
 # =============================
 st.divider()
 st.subheader("📊 Real-Time Monitoring Dashboard")
@@ -151,18 +186,16 @@ if simulate_alert:
     st.session_state.threats_detected += 1
     st.session_state.high_alerts += 1
 
-    top_label = "Chainsaw"
-    top_confidence = 0.92
-
     alert_entry = {
         "Time": datetime.now().strftime("%H:%M:%S"),
         "Region": region,
-        "Threat": top_label,
+        "Threat": "Chainsaw",
         "Confidence (%)": 92
     }
+
     st.session_state.alert_history.append(alert_entry)
 
-    st.error(f"🚨 HIGH ALERT: {top_label} detected in {region}")
+    st.error(f"🚨 HIGH ALERT: Chainsaw detected in {region}")
 
     # Siren
     st.markdown("""
@@ -171,7 +204,6 @@ if simulate_alert:
     </audio>
     """, unsafe_allow_html=True)
 
-    # Email Simulation
     st.info("📧 Email Notification Sent to Forest Control Authority (Simulated Azure Logic App)")
 
     # Confidence Dial
@@ -189,6 +221,7 @@ if simulate_alert:
             ],
         }
     ))
+
     st.plotly_chart(fig, use_container_width=True)
 
 # =============================
@@ -214,6 +247,7 @@ if st.session_state.alert_history:
     st.dataframe(history_df, use_container_width=True)
 
     pdf_file = generate_pdf(history_df)
+
     st.download_button(
         label="📄 Download Alert Report (PDF)",
         data=pdf_file,
@@ -221,4 +255,4 @@ if st.session_state.alert_history:
         mime="application/pdf"
     )
 
-st.info("Upload audio or use Demo Mode to simulate detection.")
+st.info("Use Demo Mode to simulate high-alert scenarios.")
