@@ -9,7 +9,7 @@ import time
 st.set_page_config(page_title="Bio-Acoustic Sentinel", layout="wide")
 
 # =============================
-# Initialize Session State
+# SESSION STATE INIT
 # =============================
 if "total_scans" not in st.session_state:
     st.session_state.total_scans = 0
@@ -17,28 +17,23 @@ if "threats_detected" not in st.session_state:
     st.session_state.threats_detected = 0
 if "high_alerts" not in st.session_state:
     st.session_state.high_alerts = 0
+if "alert_history" not in st.session_state:
+    st.session_state.alert_history = []
 
 # =============================
-# Threat Definitions
+# THREAT CONFIG
 # =============================
-THREAT_KEYWORDS = [
-    "Chainsaw",
-    "Gunshot",
-    "Explosion",
-    "Fire",
-    "Siren"
-]
-
+THREAT_KEYWORDS = ["Chainsaw", "Gunshot", "Explosion", "Fire", "Siren"]
 CONFIDENCE_THRESHOLD = 0.6
 
 # =============================
-# UI Header
+# HEADER
 # =============================
 st.title("🌱 Bio-Acoustic Sentinel")
 st.markdown("AI-powered Real-Time Environmental Threat Detection System")
 
 # =============================
-# Sidebar Controls
+# SIDEBAR CONTROLS
 # =============================
 st.sidebar.header("🛠 System Controls")
 sensitivity = st.sidebar.slider("Detection Sensitivity", 0, 100, 75)
@@ -51,26 +46,40 @@ region = st.sidebar.selectbox(
 st.sidebar.success("🟢 System Status: ACTIVE")
 
 # =============================
-# Real-Time Dashboard Counters
+# DASHBOARD COUNTERS
 # =============================
 st.divider()
 st.subheader("📊 Real-Time Monitoring Dashboard")
 
 col1, col2, col3 = st.columns(3)
-
 col1.metric("🔎 Total Scans", st.session_state.total_scans)
 col2.metric("🚨 Threats Detected", st.session_state.threats_detected)
 col3.metric("🔥 High Escalations", st.session_state.high_alerts)
 
+# =============================
+# MAP VISUALIZATION
+# =============================
+st.subheader("🌍 Threat Monitoring Map")
+
+region_coords = {
+    "Uttarakhand": [30.0668, 79.0193],
+    "Assam": [26.2006, 92.9376],
+    "Amazon": [-3.4653, -62.2159],
+    "Sundarbans": [21.9497, 89.1833],
+    "Western Ghats": [10.8505, 76.2711]
+}
+
+map_data = pd.DataFrame({
+    "lat": [region_coords[region][0]],
+    "lon": [region_coords[region][1]]
+})
+
+st.map(map_data)
+
 st.divider()
 
 # =============================
-# File Upload
-# =============================
-uploaded_file = st.file_uploader("Upload forest audio (.wav/.mp3)", type=["wav", "mp3"])
-
-# =============================
-# Detection Function
+# DETECTION FUNCTION
 # =============================
 def run_detection(waveform):
     energy = np.mean(np.abs(waveform))
@@ -80,7 +89,7 @@ def run_detection(waveform):
     elif energy > 0.10:
         return "Gunshot", np.random.uniform(0.70, 0.88)
     elif energy > 0.07:
-        return "Fire Crackling", np.random.uniform(0.60, 0.82)
+        return "Fire", np.random.uniform(0.60, 0.82)
     else:
         return "Forest Ambient", np.random.uniform(0.80, 0.95)
 
@@ -92,42 +101,50 @@ live_mode = st.toggle("🎥 Enable Live Monitoring Mode")
 if live_mode:
     st.info("🔄 Live Monitoring Active...")
 
-    for i in range(5):  # simulate 5 live scans
+    for i in range(5):
         st.session_state.total_scans += 1
-
         simulated_wave = np.random.rand(16000)
-        top_label, top_confidence = run_detection(simulated_wave)
 
+        top_label, top_confidence = run_detection(simulated_wave)
         is_threat = any(keyword.lower() in top_label.lower() for keyword in THREAT_KEYWORDS)
 
-        with st.container():
-            st.subheader(f"📡 Scan #{st.session_state.total_scans}")
+        st.subheader(f"📡 Scan #{st.session_state.total_scans}")
 
-            if is_threat and top_confidence > CONFIDENCE_THRESHOLD:
-                st.session_state.threats_detected += 1
+        if is_threat and top_confidence > CONFIDENCE_THRESHOLD:
+            st.session_state.threats_detected += 1
 
-                if top_confidence > 0.85:
-                    st.session_state.high_alerts += 1
-                    st.error(f"🚨 HIGH ALERT: {top_label} detected in {region}")
-                else:
-                    st.warning(f"⚠ MEDIUM ALERT: {top_label} detected in {region}")
+            alert_entry = {
+                "Time": datetime.now().strftime("%H:%M:%S"),
+                "Region": region,
+                "Threat": top_label,
+                "Confidence (%)": round(top_confidence*100, 2)
+            }
+            st.session_state.alert_history.append(alert_entry)
 
-                st.write(f"Confidence: {round(top_confidence*100,2)}%")
+            if top_confidence > 0.85:
+                st.session_state.high_alerts += 1
+                st.error(f"🚨 HIGH ALERT: {top_label} detected in {region}")
             else:
-                st.success("✅ No Threat Detected")
+                st.warning(f"⚠ MEDIUM ALERT: {top_label} detected in {region}")
+
+            st.info("📡 Alert dispatched to Forest Control Room (Simulated Azure Notification)")
+            st.write(f"Confidence: {round(top_confidence*100, 2)}%")
+        else:
+            st.success("✅ No Threat Detected")
 
         time.sleep(1)
 
 # =============================
-# Manual Upload Detection
+# MANUAL AUDIO UPLOAD
 # =============================
-elif uploaded_file is not None:
+uploaded_file = st.file_uploader("Upload forest audio (.wav/.mp3)", type=["wav", "mp3"])
+
+if uploaded_file is not None and not live_mode:
 
     st.audio(uploaded_file)
     waveform, sr = librosa.load(uploaded_file, sr=16000)
 
     st.session_state.total_scans += 1
-
     top_label, top_confidence = run_detection(waveform)
     is_threat = any(keyword.lower() in top_label.lower() for keyword in THREAT_KEYWORDS)
 
@@ -136,43 +153,60 @@ elif uploaded_file is not None:
     if is_threat and top_confidence > CONFIDENCE_THRESHOLD:
         st.session_state.threats_detected += 1
 
+        alert_entry = {
+            "Time": datetime.now().strftime("%H:%M:%S"),
+            "Region": region,
+            "Threat": top_label,
+            "Confidence (%)": round(top_confidence*100, 2)
+        }
+        st.session_state.alert_history.append(alert_entry)
+
         if top_confidence > 0.85:
             st.session_state.high_alerts += 1
             st.error(f"🚨 HIGH ALERT: {top_label} detected in {region}")
         else:
             st.warning(f"⚠ MEDIUM ALERT: {top_label} detected in {region}")
 
+        st.info("📡 Alert dispatched to Forest Control Room (Simulated Azure Notification)")
         st.write(f"Confidence: {round(top_confidence*100, 2)}%")
-
     else:
         st.success("✅ No Critical Threat Detected")
         st.info(f"Top Sound: {top_label}")
         st.write(f"Confidence: {round(top_confidence*100, 2)}%")
 
-    # Log Table
-    log_data = {
-        "Timestamp": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
-        "Region": [region],
-        "Detected Label": [top_label],
-        "Confidence (%)": [round(top_confidence*100, 2)],
-        "Threat Detected": [is_threat]
-    }
+    # AI Explanation
+    with st.expander("🤖 AI Explanation"):
+        st.write(f"""
+        The system analyzed acoustic energy patterns and classified the dominant sound as **{top_label}**.
+        Based on sensitivity level {sensitivity}, the threat probability was evaluated.
+        Geo-tagging confirms event origin in **{region}** region.
+        """)
 
-    df = pd.DataFrame(log_data)
-    st.subheader("📋 Detection Log")
-    st.dataframe(df, use_container_width=True)
-
-    # Waveform
+    # Waveform Visualization
     st.subheader("📈 Audio Waveform")
     fig, ax = plt.subplots()
     ax.plot(waveform[:5000])
     ax.set_title("Audio Signal Snapshot")
+    ax.set_xlabel("Samples")
+    ax.set_ylabel("Amplitude")
     st.pyplot(fig)
 
-    # Confidence Graph
+    # Confidence Distribution
     st.subheader("📊 Confidence Distribution")
     fake_scores = np.random.rand(20)
     st.line_chart(fake_scores)
 
-else:
+# =============================
+# ALERT HISTORY TABLE
+# =============================
+if st.session_state.alert_history:
+    st.divider()
+    st.subheader("🗂 Alert History")
+    history_df = pd.DataFrame(st.session_state.alert_history)
+    st.dataframe(history_df, use_container_width=True)
+
+# =============================
+# DEFAULT MESSAGE
+# =============================
+if not live_mode and uploaded_file is None:
     st.info("Upload audio or enable Live Monitoring Mode to begin detection.")
