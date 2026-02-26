@@ -50,7 +50,7 @@ st.markdown("☁ Powered by Microsoft Azure AI Infrastructure (Simulation)")
 st.markdown("AI-powered Real-Time Environmental Threat Detection System")
 
 # =============================
-# UPTIME COUNTER
+# SYSTEM UPTIME
 # =============================
 uptime_seconds = int(time.time() - st.session_state.start_time)
 st.caption(f"🕒 System Uptime: {uptime_seconds} seconds")
@@ -99,9 +99,68 @@ map_data = pd.DataFrame({
 
 st.map(map_data)
 
+st.divider()
+
 # =============================
-# DETECTION FUNCTION
+# SIMULATE HIGH ALERT BUTTON
 # =============================
+simulate_alert = st.button("🚨 Simulate High Alert (Demo Mode)")
+
+if simulate_alert:
+
+    st.session_state.total_scans += 1
+    st.session_state.threats_detected += 1
+    st.session_state.high_alerts += 1
+
+    top_label = "Chainsaw"
+    top_confidence = 0.92
+
+    alert_entry = {
+        "Time": datetime.now().strftime("%H:%M:%S"),
+        "Region": region,
+        "Threat": top_label,
+        "Confidence (%)": 92
+    }
+    st.session_state.alert_history.append(alert_entry)
+
+    st.subheader("🔍 AI Detection Result")
+    st.error(f"🚨 HIGH ALERT: {top_label} detected in {region}")
+
+    # 🔊 Siren Sound
+    st.markdown("""
+    <audio autoplay>
+        <source src="https://www.soundjay.com/misc/sounds/siren-01.mp3" type="audio/mpeg">
+    </audio>
+    """, unsafe_allow_html=True)
+
+    # 📧 Email Simulation
+    st.info("📧 Email Notification Sent to Forest Control Authority (Simulated Azure Logic App)")
+
+    # 🎯 AI Confidence Dial
+    st.subheader("🎯 AI Confidence Dial")
+
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=92,
+        title={'text': "Confidence Level"},
+        gauge={
+            'axis': {'range': [0, 100]},
+            'bar': {'color': "cyan"},
+            'steps': [
+                {'range': [0, 50], 'color': "green"},
+                {'range': [50, 75], 'color': "orange"},
+                {'range': [75, 100], 'color': "red"}
+            ],
+        }
+    ))
+
+    st.plotly_chart(fig, use_container_width=True)
+
+# =============================
+# AUDIO UPLOAD DETECTION
+# =============================
+uploaded_file = st.file_uploader("Upload forest audio (.wav/.mp3)", type=["wav", "mp3"])
+
 def run_detection(waveform):
     energy = np.mean(np.abs(waveform))
     if energy > 0.15:
@@ -112,11 +171,6 @@ def run_detection(waveform):
         return "Fire", np.random.uniform(0.60, 0.82)
     else:
         return "Forest Ambient", np.random.uniform(0.80, 0.95)
-
-# =============================
-# FILE UPLOAD
-# =============================
-uploaded_file = st.file_uploader("Upload forest audio (.wav/.mp3)", type=["wav", "mp3"])
 
 if uploaded_file is not None:
 
@@ -143,48 +197,13 @@ if uploaded_file is not None:
         if top_confidence > 0.85:
             st.session_state.high_alerts += 1
             st.error(f"🚨 HIGH ALERT: {top_label} detected in {region}")
-
-            # 🚨 Animated Siren Sound
-            st.markdown("""
-            <audio autoplay>
-                <source src="https://www.soundjay.com/misc/sounds/siren-01.mp3" type="audio/mpeg">
-            </audio>
-            """, unsafe_allow_html=True)
-
-            # 📧 Auto Email Simulation
-            st.info("📧 Email Notification Sent to Forest Control Authority (Simulated Azure Logic App)")
-
         else:
             st.warning(f"⚠ MEDIUM ALERT: {top_label} detected in {region}")
 
     else:
         st.success("✅ No Critical Threat Detected")
 
-    # =============================
-    # AI CONFIDENCE DIAL
-    # =============================
-    st.subheader("🎯 AI Confidence Dial")
-
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=top_confidence * 100,
-        title={'text': "Confidence Level"},
-        gauge={
-            'axis': {'range': [0, 100]},
-            'bar': {'color': "cyan"},
-            'steps': [
-                {'range': [0, 50], 'color': "green"},
-                {'range': [50, 75], 'color': "orange"},
-                {'range': [75, 100], 'color': "red"}
-            ],
-        }
-    ))
-
-    st.plotly_chart(fig, use_container_width=True)
-
-    # =============================
-    # WAVEFORM
-    # =============================
+    # Waveform
     st.subheader("📈 Audio Waveform")
     fig2, ax = plt.subplots()
     ax.plot(waveform[:5000])
@@ -200,8 +219,5 @@ if st.session_state.alert_history:
     history_df = pd.DataFrame(st.session_state.alert_history)
     st.dataframe(history_df, use_container_width=True)
 
-# =============================
-# DEFAULT MESSAGE
-# =============================
-if uploaded_file is None:
-    st.info("Upload audio to begin detection.")
+if uploaded_file is None and not simulate_alert:
+    st.info("Upload audio or use Demo Mode to simulate detection.")
