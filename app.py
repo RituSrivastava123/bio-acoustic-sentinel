@@ -9,6 +9,18 @@ import time
 st.set_page_config(page_title="Bio-Acoustic Sentinel", layout="wide")
 
 # =============================
+# DARK CYBER THEME
+# =============================
+st.markdown("""
+<style>
+body { background-color: #0e1117; }
+.stApp { background-color: #0e1117; color: white; }
+h1, h2, h3 { color: #00ffcc; }
+[data-testid="stMetricValue"] { font-size: 28px; color: #00ffcc; }
+</style>
+""", unsafe_allow_html=True)
+
+# =============================
 # SESSION STATE INIT
 # =============================
 if "total_scans" not in st.session_state:
@@ -21,7 +33,7 @@ if "alert_history" not in st.session_state:
     st.session_state.alert_history = []
 
 # =============================
-# THREAT CONFIG
+# CONFIG
 # =============================
 THREAT_KEYWORDS = ["Chainsaw", "Gunshot", "Explosion", "Fire", "Siren"]
 CONFIDENCE_THRESHOLD = 0.6
@@ -30,10 +42,11 @@ CONFIDENCE_THRESHOLD = 0.6
 # HEADER
 # =============================
 st.title("🌱 Bio-Acoustic Sentinel")
+st.markdown("☁ Powered by Microsoft Azure AI Infrastructure (Simulation)")
 st.markdown("AI-powered Real-Time Environmental Threat Detection System")
 
 # =============================
-# SIDEBAR CONTROLS
+# SIDEBAR
 # =============================
 st.sidebar.header("🛠 System Controls")
 sensitivity = st.sidebar.slider("Detection Sensitivity", 0, 100, 75)
@@ -57,7 +70,7 @@ col2.metric("🚨 Threats Detected", st.session_state.threats_detected)
 col3.metric("🔥 High Escalations", st.session_state.high_alerts)
 
 # =============================
-# MAP VISUALIZATION
+# MAP
 # =============================
 st.subheader("🌍 Threat Monitoring Map")
 
@@ -76,6 +89,13 @@ map_data = pd.DataFrame({
 
 st.map(map_data)
 
+# =============================
+# HEATMAP
+# =============================
+st.subheader("🔥 Threat Intensity Heatmap")
+heatmap_data = pd.DataFrame(np.random.rand(10, 10))
+st.dataframe(heatmap_data.style.background_gradient(cmap="Reds"))
+
 st.divider()
 
 # =============================
@@ -83,7 +103,6 @@ st.divider()
 # =============================
 def run_detection(waveform):
     energy = np.mean(np.abs(waveform))
-
     if energy > 0.15:
         return "Chainsaw", np.random.uniform(0.80, 0.95)
     elif energy > 0.10:
@@ -128,14 +147,13 @@ if live_mode:
                 st.warning(f"⚠ MEDIUM ALERT: {top_label} detected in {region}")
 
             st.info("📡 Alert dispatched to Forest Control Room (Simulated Azure Notification)")
-            st.write(f"Confidence: {round(top_confidence*100, 2)}%")
         else:
             st.success("✅ No Threat Detected")
 
         time.sleep(1)
 
 # =============================
-# MANUAL AUDIO UPLOAD
+# MANUAL UPLOAD
 # =============================
 uploaded_file = st.file_uploader("Upload forest audio (.wav/.mp3)", type=["wav", "mp3"])
 
@@ -168,36 +186,38 @@ if uploaded_file is not None and not live_mode:
             st.warning(f"⚠ MEDIUM ALERT: {top_label} detected in {region}")
 
         st.info("📡 Alert dispatched to Forest Control Room (Simulated Azure Notification)")
-        st.write(f"Confidence: {round(top_confidence*100, 2)}%")
     else:
         st.success("✅ No Critical Threat Detected")
-        st.info(f"Top Sound: {top_label}")
-        st.write(f"Confidence: {round(top_confidence*100, 2)}%")
+
+    # Severity Gauge
+    st.subheader("🎯 Threat Severity Level")
+    severity_score = int(top_confidence * 100)
+    st.progress(severity_score)
+
+    if severity_score > 85:
+        st.error("🔴 Critical Risk Zone")
+    elif severity_score > 70:
+        st.warning("🟠 Moderate Risk Zone")
+    else:
+        st.success("🟢 Low Risk Zone")
 
     # AI Explanation
     with st.expander("🤖 AI Explanation"):
         st.write(f"""
         The system analyzed acoustic energy patterns and classified the dominant sound as **{top_label}**.
-        Based on sensitivity level {sensitivity}, the threat probability was evaluated.
-        Geo-tagging confirms event origin in **{region}** region.
+        Sensitivity level set at {sensitivity}.
+        Geo-tag confirms detection in **{region}** region.
         """)
 
-    # Waveform Visualization
+    # Waveform
     st.subheader("📈 Audio Waveform")
     fig, ax = plt.subplots()
     ax.plot(waveform[:5000])
     ax.set_title("Audio Signal Snapshot")
-    ax.set_xlabel("Samples")
-    ax.set_ylabel("Amplitude")
     st.pyplot(fig)
 
-    # Confidence Distribution
-    st.subheader("📊 Confidence Distribution")
-    fake_scores = np.random.rand(20)
-    st.line_chart(fake_scores)
-
 # =============================
-# ALERT HISTORY TABLE
+# ALERT HISTORY
 # =============================
 if st.session_state.alert_history:
     st.divider()
