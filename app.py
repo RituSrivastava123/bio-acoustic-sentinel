@@ -6,18 +6,33 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import time
+import random
+from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 
 st.set_page_config(page_title="Bio-Acoustic Sentinel", layout="wide")
 
 # =============================
-# DARK CYBER THEME
+# CYBER DARK THEME
 # =============================
 st.markdown("""
 <style>
-body { background-color: #0e1117; }
-.stApp { background-color: #0e1117; color: white; }
-h1, h2, h3 { color: #00ffcc; }
-[data-testid="stMetricValue"] { font-size: 28px; color: #00ffcc; }
+.stApp {
+    background-color: #0e1117;
+    color: white;
+}
+h1, h2, h3 {
+    color: #00ffcc;
+}
+.blink {
+    animation: blinker 1s linear infinite;
+    border: 5px solid red;
+    padding: 10px;
+}
+@keyframes blinker {
+    50% { border-color: transparent; }
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -35,6 +50,8 @@ if "high_alerts" not in st.session_state:
     st.session_state.high_alerts = 0
 if "alert_history" not in st.session_state:
     st.session_state.alert_history = []
+if "blink" not in st.session_state:
+    st.session_state.blink = False
 
 # =============================
 # CONFIG
@@ -45,9 +62,15 @@ CONFIDENCE_THRESHOLD = 0.6
 # =============================
 # HEADER
 # =============================
+if st.session_state.blink:
+    st.markdown('<div class="blink">', unsafe_allow_html=True)
+
 st.title("🌱 Bio-Acoustic Sentinel")
 st.markdown("☁ Powered by Microsoft Azure AI Infrastructure (Simulation)")
 st.markdown("AI-powered Real-Time Environmental Threat Detection System")
+
+if st.session_state.blink:
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # =============================
 # SYSTEM UPTIME
@@ -67,6 +90,21 @@ region = st.sidebar.selectbox(
 )
 
 st.sidebar.success("🟢 System Status: ACTIVE")
+
+# =============================
+# MULTI SENSOR SIMULATION
+# =============================
+st.sidebar.subheader("📡 Sensor Network Status")
+sensor_status = {
+    "Sensor-1": random.choice(["Online", "Online", "Online", "Offline"]),
+    "Sensor-2": random.choice(["Online", "Online", "Offline"]),
+    "Sensor-3": random.choice(["Online", "Online", "Online"]),
+}
+for sensor, status in sensor_status.items():
+    if status == "Online":
+        st.sidebar.success(f"{sensor}: {status}")
+    else:
+        st.sidebar.error(f"{sensor}: {status}")
 
 # =============================
 # DASHBOARD METRICS
@@ -102,12 +140,13 @@ st.map(map_data)
 st.divider()
 
 # =============================
-# SIMULATE HIGH ALERT BUTTON
+# SIMULATE HIGH ALERT
 # =============================
 simulate_alert = st.button("🚨 Simulate High Alert (Demo Mode)")
 
 if simulate_alert:
 
+    st.session_state.blink = True
     st.session_state.total_scans += 1
     st.session_state.threats_detected += 1
     st.session_state.high_alerts += 1
@@ -123,26 +162,23 @@ if simulate_alert:
     }
     st.session_state.alert_history.append(alert_entry)
 
-    st.subheader("🔍 AI Detection Result")
     st.error(f"🚨 HIGH ALERT: {top_label} detected in {region}")
 
-    # 🔊 Siren Sound
+    # Siren
     st.markdown("""
     <audio autoplay>
         <source src="https://www.soundjay.com/misc/sounds/siren-01.mp3" type="audio/mpeg">
     </audio>
     """, unsafe_allow_html=True)
 
-    # 📧 Email Simulation
+    # Email Simulation
     st.info("📧 Email Notification Sent to Forest Control Authority (Simulated Azure Logic App)")
 
-    # 🎯 AI Confidence Dial
-    st.subheader("🎯 AI Confidence Dial")
-
+    # Confidence Dial
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=92,
-        title={'text': "Confidence Level"},
+        title={'text': "AI Confidence Level"},
         gauge={
             'axis': {'range': [0, 100]},
             'bar': {'color': "cyan"},
@@ -153,71 +189,36 @@ if simulate_alert:
             ],
         }
     ))
-
     st.plotly_chart(fig, use_container_width=True)
 
 # =============================
-# AUDIO UPLOAD DETECTION
+# PDF EXPORT
 # =============================
-uploaded_file = st.file_uploader("Upload forest audio (.wav/.mp3)", type=["wav", "mp3"])
+def generate_pdf(dataframe):
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    p.drawString(100, 750, "Bio-Acoustic Sentinel Alert Report")
+    y = 720
+    for index, row in dataframe.iterrows():
+        text = f"{row['Time']} | {row['Region']} | {row['Threat']} | {row['Confidence (%)']}%"
+        p.drawString(50, y, text)
+        y -= 20
+    p.save()
+    buffer.seek(0)
+    return buffer
 
-def run_detection(waveform):
-    energy = np.mean(np.abs(waveform))
-    if energy > 0.15:
-        return "Chainsaw", np.random.uniform(0.85, 0.95)
-    elif energy > 0.10:
-        return "Gunshot", np.random.uniform(0.70, 0.88)
-    elif energy > 0.07:
-        return "Fire", np.random.uniform(0.60, 0.82)
-    else:
-        return "Forest Ambient", np.random.uniform(0.80, 0.95)
-
-if uploaded_file is not None:
-
-    st.audio(uploaded_file)
-    waveform, sr = librosa.load(uploaded_file, sr=16000)
-
-    st.session_state.total_scans += 1
-    top_label, top_confidence = run_detection(waveform)
-    is_threat = any(keyword.lower() in top_label.lower() for keyword in THREAT_KEYWORDS)
-
-    st.subheader("🔍 AI Detection Result")
-
-    if is_threat and top_confidence > CONFIDENCE_THRESHOLD:
-        st.session_state.threats_detected += 1
-
-        alert_entry = {
-            "Time": datetime.now().strftime("%H:%M:%S"),
-            "Region": region,
-            "Threat": top_label,
-            "Confidence (%)": round(top_confidence*100, 2)
-        }
-        st.session_state.alert_history.append(alert_entry)
-
-        if top_confidence > 0.85:
-            st.session_state.high_alerts += 1
-            st.error(f"🚨 HIGH ALERT: {top_label} detected in {region}")
-        else:
-            st.warning(f"⚠ MEDIUM ALERT: {top_label} detected in {region}")
-
-    else:
-        st.success("✅ No Critical Threat Detected")
-
-    # Waveform
-    st.subheader("📈 Audio Waveform")
-    fig2, ax = plt.subplots()
-    ax.plot(waveform[:5000])
-    ax.set_title("Audio Signal Snapshot")
-    st.pyplot(fig2)
-
-# =============================
-# ALERT HISTORY
-# =============================
 if st.session_state.alert_history:
     st.divider()
     st.subheader("🗂 Alert History")
     history_df = pd.DataFrame(st.session_state.alert_history)
     st.dataframe(history_df, use_container_width=True)
 
-if uploaded_file is None and not simulate_alert:
-    st.info("Upload audio or use Demo Mode to simulate detection.")
+    pdf_file = generate_pdf(history_df)
+    st.download_button(
+        label="📄 Download Alert Report (PDF)",
+        data=pdf_file,
+        file_name="alert_report.pdf",
+        mime="application/pdf"
+    )
+
+st.info("Upload audio or use Demo Mode to simulate detection.")
