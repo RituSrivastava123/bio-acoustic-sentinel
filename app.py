@@ -1,10 +1,8 @@
 import streamlit as st
-import numpy as np
 import pandas as pd
 from datetime import datetime
 import plotly.graph_objects as go
 import time
-import random
 from io import BytesIO
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
@@ -12,7 +10,7 @@ from reportlab.pdfgen import canvas
 st.set_page_config(page_title="Bio-Acoustic Sentinel", layout="wide")
 
 # =============================
-# GLOBAL STYLING
+# STYLING
 # =============================
 st.markdown("""
 <style>
@@ -36,10 +34,9 @@ h1, h2, h3 {
     font-size: 20px;
 }
 
-/* Emergency takeover */
+/* Emergency Mode */
 .emergency {
-    background-color: #8B0000 !important;
-    color: white !important;
+    background-color: #8B0000;
     padding: 20px;
     border-radius: 10px;
     animation: pulse 1s infinite;
@@ -51,13 +48,13 @@ h1, h2, h3 {
     100% { background-color: #8B0000; }
 }
 
-/* Animated siren icon */
+/* Siren Animation */
 .siren {
-    font-size: 50px;
-    animation: spin 1s linear infinite;
+    font-size: 60px;
+    animation: shake 0.5s infinite;
 }
 
-@keyframes spin {
+@keyframes shake {
     0% { transform: rotate(-10deg); }
     50% { transform: rotate(10deg); }
     100% { transform: rotate(-10deg); }
@@ -102,7 +99,7 @@ if "high_alerts" not in st.session_state:
     st.session_state.high_alerts = 0
 
 # =============================
-# AZURE HEADER
+# HEADER
 # =============================
 st.markdown('<div class="azure-header">☁ Microsoft Azure Smart Forest Monitoring Network</div>', unsafe_allow_html=True)
 
@@ -115,18 +112,6 @@ uptime = int(time.time() - st.session_state.start_time)
 st.caption(f"🕒 System Uptime: {uptime} seconds")
 
 # =============================
-# SIDEBAR
-# =============================
-st.sidebar.header("🛠 Controls")
-
-region = st.sidebar.selectbox(
-    "🌍 Forest Region",
-    ["Uttarakhand", "Assam", "Amazon", "Sundarbans", "Western Ghats"]
-)
-
-st.sidebar.success("🟢 System Status: ACTIVE")
-
-# =============================
 # DASHBOARD METRICS
 # =============================
 col1, col2, col3 = st.columns(3)
@@ -137,7 +122,7 @@ col3.metric("🔥 High Escalations", st.session_state.high_alerts)
 st.divider()
 
 # =============================
-# SIMULATE HIGH ALERT
+# SIMULATE HIGH ALERT BUTTON
 # =============================
 simulate = st.button("🚨 Simulate HIGH ALERT")
 
@@ -149,22 +134,21 @@ if simulate:
 
     alert_entry = {
         "Time": datetime.now().strftime("%H:%M:%S"),
-        "Region": region,
+        "Region": "Uttarakhand",
         "Threat": "Chainsaw",
         "Confidence (%)": 95
     }
     st.session_state.alert_history.append(alert_entry)
 
 # =============================
-# EMERGENCY MODE DISPLAY
+# EMERGENCY DISPLAY
 # =============================
 if st.session_state.emergency:
 
     st.markdown('<div class="emergency">', unsafe_allow_html=True)
-
     st.markdown('<div class="siren">🚨</div>', unsafe_allow_html=True)
 
-    st.error(f"HIGH ALERT: Chainsaw detected in {region}")
+    st.error("HIGH ALERT: Chainsaw detected in Uttarakhand")
     st.info("📧 Email Notification Sent (Simulated Azure Logic App)")
 
     # Siren Sound
@@ -174,7 +158,7 @@ if st.session_state.emergency:
     </audio>
     """, unsafe_allow_html=True)
 
-    # Confidence Gauge
+    # Confidence Dial
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=95,
@@ -193,20 +177,18 @@ if st.session_state.emergency:
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Auto reset after 5 seconds
     time.sleep(5)
     st.session_state.emergency = False
-    st.experimental_rerun()
+    st.rerun()
 
 # =============================
-# ALERT HISTORY
+# ALERT HISTORY + PDF EXPORT
 # =============================
 if st.session_state.alert_history:
     st.subheader("🗂 Alert History")
     history_df = pd.DataFrame(st.session_state.alert_history)
     st.dataframe(history_df, use_container_width=True)
 
-    # PDF Export
     def generate_pdf(dataframe):
         buffer = BytesIO()
         p = canvas.Canvas(buffer, pagesize=letter)
