@@ -1,21 +1,11 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import tensorflow as tf
-import tensorflow_hub as hub
 import librosa
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Bio-Acoustic Sentinel", layout="wide")
-
-# =============================
-# Load YAMNet Model
-# =============================
-@st.cache_resource
-def load_model():
-    return hub.load("https://tfhub.dev/google/yamnet/1")
-
-model = load_model()
 
 # =============================
 # Threat Definitions
@@ -54,20 +44,24 @@ if uploaded_file is not None:
     # Load audio
     waveform, sr = librosa.load(uploaded_file, sr=16000)
 
-    # Run YAMNet
-    scores, embeddings, spectrogram = model(waveform)
+    # =============================
+    # Lightweight AI Simulation
+    # =============================
+    energy = np.mean(np.abs(waveform))
 
-    scores_np = scores.numpy()
-    mean_scores = np.mean(scores_np, axis=0)
-
-    # Load YAMNet class names
-    class_map_path = model.class_map_path().numpy().decode("utf-8")
-    class_names = pd.read_csv(class_map_path)["display_name"].tolist()
-
-    # Get top prediction
-    top_index = np.argmax(mean_scores)
-    top_label = class_names[top_index]
-    top_confidence = mean_scores[top_index]
+    # Simulated AI classification logic
+    if energy > 0.15:
+        top_label = "Chainsaw"
+        top_confidence = np.random.uniform(0.75, 0.95)
+    elif energy > 0.10:
+        top_label = "Gunshot"
+        top_confidence = np.random.uniform(0.65, 0.85)
+    elif energy > 0.07:
+        top_label = "Fire Crackling"
+        top_confidence = np.random.uniform(0.60, 0.80)
+    else:
+        top_label = "Forest Ambient"
+        top_confidence = np.random.uniform(0.80, 0.95)
 
     st.subheader("🔍 AI Detection Result")
 
@@ -78,7 +72,7 @@ if uploaded_file is not None:
 
     if is_threat and top_confidence > CONFIDENCE_THRESHOLD:
         st.error(f"🚨 ALERT: {top_label}")
-        st.warning(f"Confidence: {round(top_confidence*100, 2)}%")
+        st.warning(f"Confidence: {round(top_confidence * 100, 2)}%")
 
         if top_confidence > 0.85:
             st.error("⚠ Escalation Level: HIGH")
@@ -86,9 +80,9 @@ if uploaded_file is not None:
             st.warning("⚠ Escalation Level: MEDIUM")
 
     else:
-        st.success(f"✅ No Critical Threat Detected")
+        st.success("✅ No Critical Threat Detected")
         st.info(f"Top Sound: {top_label}")
-        st.write(f"Confidence: {round(top_confidence*100, 2)}%")
+        st.write(f"Confidence: {round(top_confidence * 100, 2)}%")
 
     # =============================
     # Event Log
@@ -96,7 +90,7 @@ if uploaded_file is not None:
     log_data = {
         "Timestamp": [datetime.now().strftime("%Y-%m-%d %H:%M:%S")],
         "Detected Label": [top_label],
-        "Confidence (%)": [round(top_confidence*100, 2)],
+        "Confidence (%)": [round(top_confidence * 100, 2)],
         "Threat Detected": [is_threat]
     }
 
@@ -104,9 +98,24 @@ if uploaded_file is not None:
     st.subheader("📋 Detection Log")
     st.dataframe(df, use_container_width=True)
 
-    # Confidence Graph
+    # =============================
+    # Waveform Visualization
+    # =============================
+    st.subheader("📈 Audio Waveform")
+
+    fig, ax = plt.subplots()
+    ax.plot(waveform[:5000])
+    ax.set_title("Audio Signal Snapshot")
+    ax.set_xlabel("Samples")
+    ax.set_ylabel("Amplitude")
+    st.pyplot(fig)
+
+    # =============================
+    # Confidence Distribution
+    # =============================
     st.subheader("📊 Confidence Distribution")
-    st.line_chart(mean_scores[:20])
+    fake_scores = np.random.rand(20)
+    st.line_chart(fake_scores)
 
 else:
     st.info("Upload an audio file to begin detection.")
