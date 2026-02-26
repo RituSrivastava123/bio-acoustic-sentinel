@@ -1,9 +1,7 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import librosa
 from datetime import datetime
-import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import time
 import random
@@ -14,7 +12,7 @@ from reportlab.pdfgen import canvas
 st.set_page_config(page_title="Bio-Acoustic Sentinel", layout="wide")
 
 # =============================
-# CYBER DARK THEME + BUTTON FIX
+# GLOBAL STYLING
 # =============================
 st.markdown("""
 <style>
@@ -27,61 +25,74 @@ h1, h2, h3 {
     color: #00ffcc;
 }
 
-[data-testid="stMetricValue"] {
-    color: #00ffcc;
+/* Azure Header */
+.azure-header {
+    background: linear-gradient(90deg, #0078D4, #00BCF2);
+    padding: 10px;
+    border-radius: 8px;
+    font-weight: bold;
+    text-align: center;
+    color: white;
+    font-size: 20px;
 }
 
-/* Simulate Alert Button */
+/* Emergency takeover */
+.emergency {
+    background-color: #8B0000 !important;
+    color: white !important;
+    padding: 20px;
+    border-radius: 10px;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { background-color: #8B0000; }
+    50% { background-color: #FF0000; }
+    100% { background-color: #8B0000; }
+}
+
+/* Animated siren icon */
+.siren {
+    font-size: 50px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(-10deg); }
+    50% { transform: rotate(10deg); }
+    100% { transform: rotate(-10deg); }
+}
+
+/* Buttons */
 div.stButton > button {
     background-color: #ff0033;
     color: white;
-    border-radius: 8px;
-    border: none;
     font-weight: bold;
+    border-radius: 8px;
     padding: 10px 20px;
-    box-shadow: 0 0 10px #ff0033;
-    transition: 0.3s;
 }
 
-div.stButton > button:hover {
-    background-color: #ff3366;
-    box-shadow: 0 0 20px red;
-    transform: scale(1.03);
-}
-
-/* Download Button */
 div.stDownloadButton > button {
     background-color: #00cc99;
     color: black;
-    border-radius: 8px;
     font-weight: bold;
+    border-radius: 8px;
     padding: 10px 20px;
-    box-shadow: 0 0 10px #00ffcc;
-    transition: 0.3s;
-}
-
-div.stDownloadButton > button:hover {
-    background-color: #00ffcc;
-    transform: scale(1.03);
-}
-
-/* Blinking Emergency Border */
-.blink {
-    animation: blinker 1s linear infinite;
-    border: 5px solid red;
-    padding: 10px;
-}
-@keyframes blinker {
-    50% { border-color: transparent; }
 }
 </style>
 """, unsafe_allow_html=True)
 
 # =============================
-# SESSION STATE INIT
+# SESSION STATE
 # =============================
 if "start_time" not in st.session_state:
     st.session_state.start_time = time.time()
+
+if "emergency" not in st.session_state:
+    st.session_state.emergency = False
+
+if "alert_history" not in st.session_state:
+    st.session_state.alert_history = []
 
 if "total_scans" not in st.session_state:
     st.session_state.total_scans = 0
@@ -89,35 +100,24 @@ if "threats_detected" not in st.session_state:
     st.session_state.threats_detected = 0
 if "high_alerts" not in st.session_state:
     st.session_state.high_alerts = 0
-if "alert_history" not in st.session_state:
-    st.session_state.alert_history = []
-if "blink" not in st.session_state:
-    st.session_state.blink = False
 
 # =============================
-# HEADER
+# AZURE HEADER
 # =============================
-if st.session_state.blink:
-    st.markdown('<div class="blink">', unsafe_allow_html=True)
+st.markdown('<div class="azure-header">☁ Microsoft Azure Smart Forest Monitoring Network</div>', unsafe_allow_html=True)
 
 st.title("🌱 Bio-Acoustic Sentinel")
-st.markdown("☁ Powered by Microsoft Azure AI Infrastructure (Simulation)")
-st.markdown("AI-powered Real-Time Environmental Threat Detection System")
-
-if st.session_state.blink:
-    st.markdown('</div>', unsafe_allow_html=True)
 
 # =============================
 # UPTIME
 # =============================
-uptime_seconds = int(time.time() - st.session_state.start_time)
-st.caption(f"🕒 System Uptime: {uptime_seconds} seconds")
+uptime = int(time.time() - st.session_state.start_time)
+st.caption(f"🕒 System Uptime: {uptime} seconds")
 
 # =============================
-# SIDEBAR CONTROLS
+# SIDEBAR
 # =============================
-st.sidebar.header("🛠 System Controls")
-sensitivity = st.sidebar.slider("Detection Sensitivity", 0, 100, 75)
+st.sidebar.header("🛠 Controls")
 
 region = st.sidebar.selectbox(
     "🌍 Forest Region",
@@ -127,61 +127,22 @@ region = st.sidebar.selectbox(
 st.sidebar.success("🟢 System Status: ACTIVE")
 
 # =============================
-# MULTI SENSOR STATUS
+# DASHBOARD METRICS
 # =============================
-st.sidebar.subheader("📡 Sensor Network Status")
-sensor_status = {
-    "Sensor-1": random.choice(["Online", "Online", "Offline"]),
-    "Sensor-2": random.choice(["Online", "Online", "Online"]),
-    "Sensor-3": random.choice(["Online", "Offline"]),
-}
-for sensor, status in sensor_status.items():
-    if status == "Online":
-        st.sidebar.success(f"{sensor}: {status}")
-    else:
-        st.sidebar.error(f"{sensor}: {status}")
-
-# =============================
-# DASHBOARD
-# =============================
-st.divider()
-st.subheader("📊 Real-Time Monitoring Dashboard")
-
 col1, col2, col3 = st.columns(3)
 col1.metric("🔎 Total Scans", st.session_state.total_scans)
 col2.metric("🚨 Threats Detected", st.session_state.threats_detected)
 col3.metric("🔥 High Escalations", st.session_state.high_alerts)
-
-# =============================
-# MAP
-# =============================
-st.subheader("🌍 Threat Monitoring Map")
-
-region_coords = {
-    "Uttarakhand": [30.0668, 79.0193],
-    "Assam": [26.2006, 92.9376],
-    "Amazon": [-3.4653, -62.2159],
-    "Sundarbans": [21.9497, 89.1833],
-    "Western Ghats": [10.8505, 76.2711]
-}
-
-map_data = pd.DataFrame({
-    "lat": [region_coords[region][0]],
-    "lon": [region_coords[region][1]]
-})
-
-st.map(map_data)
 
 st.divider()
 
 # =============================
 # SIMULATE HIGH ALERT
 # =============================
-simulate_alert = st.button("🚨 Simulate High Alert (Demo Mode)")
+simulate = st.button("🚨 Simulate HIGH ALERT")
 
-if simulate_alert:
-
-    st.session_state.blink = True
+if simulate:
+    st.session_state.emergency = True
     st.session_state.total_scans += 1
     st.session_state.threats_detected += 1
     st.session_state.high_alerts += 1
@@ -190,27 +151,34 @@ if simulate_alert:
         "Time": datetime.now().strftime("%H:%M:%S"),
         "Region": region,
         "Threat": "Chainsaw",
-        "Confidence (%)": 92
+        "Confidence (%)": 95
     }
-
     st.session_state.alert_history.append(alert_entry)
 
-    st.error(f"🚨 HIGH ALERT: Chainsaw detected in {region}")
+# =============================
+# EMERGENCY MODE DISPLAY
+# =============================
+if st.session_state.emergency:
 
-    # Siren
+    st.markdown('<div class="emergency">', unsafe_allow_html=True)
+
+    st.markdown('<div class="siren">🚨</div>', unsafe_allow_html=True)
+
+    st.error(f"HIGH ALERT: Chainsaw detected in {region}")
+    st.info("📧 Email Notification Sent (Simulated Azure Logic App)")
+
+    # Siren Sound
     st.markdown("""
     <audio autoplay>
         <source src="https://www.soundjay.com/misc/sounds/siren-01.mp3" type="audio/mpeg">
     </audio>
     """, unsafe_allow_html=True)
 
-    st.info("📧 Email Notification Sent to Forest Control Authority (Simulated Azure Logic App)")
-
-    # Confidence Dial
+    # Confidence Gauge
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
-        value=92,
-        title={'text': "AI Confidence Level"},
+        value=95,
+        title={'text': "AI Confidence"},
         gauge={
             'axis': {'range': [0, 100]},
             'bar': {'color': "cyan"},
@@ -221,38 +189,44 @@ if simulate_alert:
             ],
         }
     ))
-
     st.plotly_chart(fig, use_container_width=True)
 
-# =============================
-# PDF EXPORT
-# =============================
-def generate_pdf(dataframe):
-    buffer = BytesIO()
-    p = canvas.Canvas(buffer, pagesize=letter)
-    p.drawString(100, 750, "Bio-Acoustic Sentinel Alert Report")
-    y = 720
-    for index, row in dataframe.iterrows():
-        text = f"{row['Time']} | {row['Region']} | {row['Threat']} | {row['Confidence (%)']}%"
-        p.drawString(50, y, text)
-        y -= 20
-    p.save()
-    buffer.seek(0)
-    return buffer
+    st.markdown('</div>', unsafe_allow_html=True)
 
+    # Auto reset after 5 seconds
+    time.sleep(5)
+    st.session_state.emergency = False
+    st.experimental_rerun()
+
+# =============================
+# ALERT HISTORY
+# =============================
 if st.session_state.alert_history:
-    st.divider()
     st.subheader("🗂 Alert History")
     history_df = pd.DataFrame(st.session_state.alert_history)
     st.dataframe(history_df, use_container_width=True)
 
-    pdf_file = generate_pdf(history_df)
+    # PDF Export
+    def generate_pdf(dataframe):
+        buffer = BytesIO()
+        p = canvas.Canvas(buffer, pagesize=letter)
+        p.drawString(100, 750, "Bio-Acoustic Sentinel Alert Report")
+        y = 720
+        for index, row in dataframe.iterrows():
+            text = f"{row['Time']} | {row['Region']} | {row['Threat']} | {row['Confidence (%)']}%"
+            p.drawString(50, y, text)
+            y -= 20
+        p.save()
+        buffer.seek(0)
+        return buffer
+
+    pdf = generate_pdf(history_df)
 
     st.download_button(
         label="📄 Download Alert Report (PDF)",
-        data=pdf_file,
+        data=pdf,
         file_name="alert_report.pdf",
         mime="application/pdf"
     )
 
-st.info("Use Demo Mode to simulate high-alert scenarios.")
+st.info("Press 'Simulate HIGH ALERT' to demonstrate emergency response.")
