@@ -4,6 +4,7 @@ import pandas as pd
 import librosa
 from datetime import datetime
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 import time
 
 st.set_page_config(page_title="Bio-Acoustic Sentinel", layout="wide")
@@ -23,6 +24,9 @@ h1, h2, h3 { color: #00ffcc; }
 # =============================
 # SESSION STATE INIT
 # =============================
+if "start_time" not in st.session_state:
+    st.session_state.start_time = time.time()
+
 if "total_scans" not in st.session_state:
     st.session_state.total_scans = 0
 if "threats_detected" not in st.session_state:
@@ -46,6 +50,12 @@ st.markdown("☁ Powered by Microsoft Azure AI Infrastructure (Simulation)")
 st.markdown("AI-powered Real-Time Environmental Threat Detection System")
 
 # =============================
+# UPTIME COUNTER
+# =============================
+uptime_seconds = int(time.time() - st.session_state.start_time)
+st.caption(f"🕒 System Uptime: {uptime_seconds} seconds")
+
+# =============================
 # SIDEBAR
 # =============================
 st.sidebar.header("🛠 System Controls")
@@ -59,7 +69,7 @@ region = st.sidebar.selectbox(
 st.sidebar.success("🟢 System Status: ACTIVE")
 
 # =============================
-# DASHBOARD COUNTERS
+# DASHBOARD METRICS
 # =============================
 st.divider()
 st.subheader("📊 Real-Time Monitoring Dashboard")
@@ -90,21 +100,12 @@ map_data = pd.DataFrame({
 st.map(map_data)
 
 # =============================
-# HEATMAP
-# =============================
-st.subheader("🔥 Threat Intensity Heatmap")
-heatmap_data = pd.DataFrame(np.random.rand(10, 10))
-st.dataframe(heatmap_data.style.background_gradient(cmap="Reds"))
-
-st.divider()
-
-# =============================
 # DETECTION FUNCTION
 # =============================
 def run_detection(waveform):
     energy = np.mean(np.abs(waveform))
     if energy > 0.15:
-        return "Chainsaw", np.random.uniform(0.80, 0.95)
+        return "Chainsaw", np.random.uniform(0.85, 0.95)
     elif energy > 0.10:
         return "Gunshot", np.random.uniform(0.70, 0.88)
     elif energy > 0.07:
@@ -113,51 +114,11 @@ def run_detection(waveform):
         return "Forest Ambient", np.random.uniform(0.80, 0.95)
 
 # =============================
-# LIVE MONITORING MODE
-# =============================
-live_mode = st.toggle("🎥 Enable Live Monitoring Mode")
-
-if live_mode:
-    st.info("🔄 Live Monitoring Active...")
-
-    for i in range(5):
-        st.session_state.total_scans += 1
-        simulated_wave = np.random.rand(16000)
-
-        top_label, top_confidence = run_detection(simulated_wave)
-        is_threat = any(keyword.lower() in top_label.lower() for keyword in THREAT_KEYWORDS)
-
-        st.subheader(f"📡 Scan #{st.session_state.total_scans}")
-
-        if is_threat and top_confidence > CONFIDENCE_THRESHOLD:
-            st.session_state.threats_detected += 1
-
-            alert_entry = {
-                "Time": datetime.now().strftime("%H:%M:%S"),
-                "Region": region,
-                "Threat": top_label,
-                "Confidence (%)": round(top_confidence*100, 2)
-            }
-            st.session_state.alert_history.append(alert_entry)
-
-            if top_confidence > 0.85:
-                st.session_state.high_alerts += 1
-                st.error(f"🚨 HIGH ALERT: {top_label} detected in {region}")
-            else:
-                st.warning(f"⚠ MEDIUM ALERT: {top_label} detected in {region}")
-
-            st.info("📡 Alert dispatched to Forest Control Room (Simulated Azure Notification)")
-        else:
-            st.success("✅ No Threat Detected")
-
-        time.sleep(1)
-
-# =============================
-# MANUAL UPLOAD
+# FILE UPLOAD
 # =============================
 uploaded_file = st.file_uploader("Upload forest audio (.wav/.mp3)", type=["wav", "mp3"])
 
-if uploaded_file is not None and not live_mode:
+if uploaded_file is not None:
 
     st.audio(uploaded_file)
     waveform, sr = librosa.load(uploaded_file, sr=16000)
@@ -182,39 +143,53 @@ if uploaded_file is not None and not live_mode:
         if top_confidence > 0.85:
             st.session_state.high_alerts += 1
             st.error(f"🚨 HIGH ALERT: {top_label} detected in {region}")
+
+            # 🚨 Animated Siren Sound
+            st.markdown("""
+            <audio autoplay>
+                <source src="https://www.soundjay.com/misc/sounds/siren-01.mp3" type="audio/mpeg">
+            </audio>
+            """, unsafe_allow_html=True)
+
+            # 📧 Auto Email Simulation
+            st.info("📧 Email Notification Sent to Forest Control Authority (Simulated Azure Logic App)")
+
         else:
             st.warning(f"⚠ MEDIUM ALERT: {top_label} detected in {region}")
 
-        st.info("📡 Alert dispatched to Forest Control Room (Simulated Azure Notification)")
     else:
         st.success("✅ No Critical Threat Detected")
 
-    # Severity Gauge
-    st.subheader("🎯 Threat Severity Level")
-    severity_score = int(top_confidence * 100)
-    st.progress(severity_score)
+    # =============================
+    # AI CONFIDENCE DIAL
+    # =============================
+    st.subheader("🎯 AI Confidence Dial")
 
-    if severity_score > 85:
-        st.error("🔴 Critical Risk Zone")
-    elif severity_score > 70:
-        st.warning("🟠 Moderate Risk Zone")
-    else:
-        st.success("🟢 Low Risk Zone")
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=top_confidence * 100,
+        title={'text': "Confidence Level"},
+        gauge={
+            'axis': {'range': [0, 100]},
+            'bar': {'color': "cyan"},
+            'steps': [
+                {'range': [0, 50], 'color': "green"},
+                {'range': [50, 75], 'color': "orange"},
+                {'range': [75, 100], 'color': "red"}
+            ],
+        }
+    ))
 
-    # AI Explanation
-    with st.expander("🤖 AI Explanation"):
-        st.write(f"""
-        The system analyzed acoustic energy patterns and classified the dominant sound as **{top_label}**.
-        Sensitivity level set at {sensitivity}.
-        Geo-tag confirms detection in **{region}** region.
-        """)
+    st.plotly_chart(fig, use_container_width=True)
 
-    # Waveform
+    # =============================
+    # WAVEFORM
+    # =============================
     st.subheader("📈 Audio Waveform")
-    fig, ax = plt.subplots()
+    fig2, ax = plt.subplots()
     ax.plot(waveform[:5000])
     ax.set_title("Audio Signal Snapshot")
-    st.pyplot(fig)
+    st.pyplot(fig2)
 
 # =============================
 # ALERT HISTORY
@@ -228,5 +203,5 @@ if st.session_state.alert_history:
 # =============================
 # DEFAULT MESSAGE
 # =============================
-if not live_mode and uploaded_file is None:
-    st.info("Upload audio or enable Live Monitoring Mode to begin detection.")
+if uploaded_file is None:
+    st.info("Upload audio to begin detection.")
