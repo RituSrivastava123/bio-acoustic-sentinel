@@ -185,6 +185,7 @@ Bio-Acoustic Sentinel
 Microsoft Green Hackathon 2026
 Ritu Srivastava – Team Lead, Artificial Intelligence and Machine Learning
 Anoushka Pandey – Computer Science Engineering
+
 Conclusion
 
 Bio-Acoustic Sentinel demonstrates how real-time acoustic analytics, machine learning, and intelligent escalation logic can form the foundation of a scalable environmental protection system.
